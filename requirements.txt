@@ -1,0 +1,7 @@
+pandas
+geopandas
+numpy
+kagglehub
+ipykernel
+matplotlib
+pyspark==3.5.6
