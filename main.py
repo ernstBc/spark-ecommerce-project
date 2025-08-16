@@ -1,3 +1,7 @@
+# ETL Process 
+# Extract Data from Kaggle and put it in local machine or HDFS
+
+
 import os
 import shutil
 import kagglehub

@@ -1,7 +1,9 @@
 import os
 
-DATA_FOLDER=''
+DATA_MAIN_DIR='data'
 DATASET_URL = "olistbr/brazilian-ecommerce"
+DATA_FOLDER = os.path.join(DATA_MAIN_DIR, 'olist')
+DATA_PROCESSED_FOLDER=os.path.join(DATA_MAIN_DIR, 'olist_processed')
 
 
 CUSTOMER_DATASET = os.path.join(DATA_FOLDER, 'olist_customers_dataset.csv')
