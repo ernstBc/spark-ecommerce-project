@@ -14,14 +14,20 @@ class Extract:
         self.data_processed_path=processed_data_dir
 
 
-    def download_dataset(self):
+    def extract(self):
         if not os.path.exists(self.data_path):
+            print('createcreatecreate')
             create_directories(self.data_path)
             create_directory(self.data_processed_path)
         
-        if not os.listdir(self.data_path) == []:
-            path = kagglehub.dataset_download(self.url, force_download=True)
+        if os.listdir(self.data_path) == []:
+            print('nonononono')
+            download_data(self.url, self.data_path)
 
-            for file in os.listdir(path):
-                file_path = os.path.join(path, file)
-                shutil.move(file_path, self.data_path)
+
+def download_data(url, data_path):
+    path = kagglehub.dataset_download(url, force_download=True)
+    
+    for file in os.listdir(path):
+        file_path = os.path.join(path, file)
+        shutil.move(file_path, data_path)

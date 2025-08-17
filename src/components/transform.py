@@ -1,8 +1,4 @@
-import os
-import math
-from pyspark.sql.functions import (col,
-                                  length,
-                                  broadcast)
+from pyspark.sql.functions import broadcast
 from src.config.config import (CUSTOMER_DATASET,
                                GEOLOCATION_DATASET,
                                ORDER_DATASET,
@@ -21,7 +17,8 @@ from src.config.schema import (CUSTOMER_DATASET_SCHEMA,
                                PRODUCTS_DATASET_SCHEMA,
                                SELLERS_DATASET_SCHEMA,
                                TRANSLATIONS_DATASET_SCHEMA)
-from src.transformations.transforms import (geolocation_dataset_transform, 
+from src.transformations.transforms import (geolocation_dataset_transform,
+                                            full_orders_dataset_transform, 
                                             review_dataset_clean,
                                             products_dataset_clean)
 
@@ -46,7 +43,6 @@ class Transform:
                                         translations_dataset = self.load_datasets()
 
         # clean datasets which needs dataset cleaning 
-
         # reviews
         # drop row without order_id, corrupt data and duplicates
         reviews_dataset = review_dataset_clean(reviews_dataset)
@@ -59,7 +55,6 @@ class Transform:
         # products
         ## impute numerical null features 
         products_dataset = products_dataset_clean(products_dataset)
-
 
 
         # joins
@@ -97,19 +92,19 @@ class Transform:
         #join payments 
         full_orders = full_order_review.join(payments_dataset, 'order_id', 'left')
 
-        
-        # remove not important columns
+        # remove redundant columns
         columns = full_orders.columns
         columns_to_remove =  [
         'customer_geolocation_city',
+        'customer_geolocation_state',
         'customer_geolocation_zip_code_prefix',
+
         'seller_geolocation_zip_code_prefix',
         'seller_geolocation_state',
         'seller_geolocation_city']
 
         for r in columns_to_remove:
             columns.remove(r)
-
         columns.sort()
 
         full_orders = full_orders.select(columns)
@@ -117,9 +112,11 @@ class Transform:
         # repartion dataset
         full_orders = full_orders.coalesce(4)
 
+        # trasnform
+        full_orders = full_orders_dataset_transform(full_orders)
+        
 
         return full_orders
-    
 
 
     def load_datasets(self):
@@ -134,7 +131,6 @@ class Transform:
         sellers_dataset = spark.read.csv(SELLERS_DATASET, header=True, schema=SELLERS_DATASET_SCHEMA)
         translations_dataset = spark.read.csv(PRODUCT_TRANSLATIONS, header=True, schema=TRANSLATIONS_DATASET_SCHEMA)
 
-
         return (
             customer_dataset,
             order_dataset,
@@ -146,53 +142,3 @@ class Transform:
             sellers_dataset,
             translations_dataset
         )
-    
-
-
-
-
-# custom trasnformations
-def haversine_distance(lat1, lon1, lat2, lon2, unit='km'):
-    """
-    Calculates the Haversine distance between two points on the Earth
-    (specified in decimal degrees).
-
-    The Haversine formula is used to compute the great-circle distance
-    between two points on a sphere from their longitudes and latitudes.
-
-    Args:
-        lat1 (float): Latitude of the first point.
-        lon1 (float): Longitude of the first point.
-        lat2 (float): Latitude of the second point.
-        lon2 (float): Longitude of the second point.
-        unit (str): The desired unit for the output distance. Can be 'km'
-                    (kilometers) or 'mi' (miles). Defaults to 'km'.
-
-    Returns:
-        float: The distance between the two points in the specified unit.
-    """
-    # Radius of the Earth in kilometers or miles
-    if unit == 'km':
-        R = 6371.0
-    elif unit == 'mi':
-        R = 3958.8
-    else:
-        raise ValueError("Unit must be 'km' or 'mi'")
-
-    # Convert coordinates from degrees to radians
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
-
-    # Calculate the differences in coordinates
-    dlat = lat2_rad - lat1_rad
-    dlon = lon2_rad - lon1_rad
-
-    # Apply the Haversine formula
-    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    
-    distance = R * c
-
-    return float(distance)
